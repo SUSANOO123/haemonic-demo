@@ -6694,7 +6694,7 @@ const App = (() => {
   const DEMO = !!window.HM_DEMO, DEMO_VER = 4, DEMO_PW = (window.HM_DEMO_CFG || {}).pw || '1234';   // DEMO_VER 4 (10/11): 자료 생성은 데모/demo.js 로 이동 · 6주 기록 · 일부러 넣은 일 · 시연 장면
   /* 데모 자료는 데모/demo.js(HM_DEMO_SEED) 가 만든다 — 숫자·이름·장면은 그 파일의 HM_DEMO_CFG 에 모아 둠 */
   async function demoSeed() {
-    const api = { setS: (v) => { S = v; }, dateKey, nowMin, shift, minutesOf, pad, newId, monthNow, freshState, applyShiftDay, ensureDay, tpl, TANK_DEFAULT, deadEntries, seedTraining, quizOf, hashPw, ROUTINE_VER, ROLE_MGR, DEMO_VER };
+    const api = { setS: (v) => { S = v; }, dateKey, nowMin, shift, minutesOf, pad, newId, monthNow, freshState, applyShiftDay, ensureDay, tpl, TANK_DEFAULT, deadEntries, seedTraining, quizOf, hashPw, schedOf, TRAIN_TRACKS, trackSteps, ROUTINE_VER, ROLE_MGR, DEMO_VER };
     const { docs, shared } = await window.HM_DEMO_SEED(api);
     for (const st of ['ansan', 'anyang']) await Store.saveStore(st, docs[st]);
     SH = shared;

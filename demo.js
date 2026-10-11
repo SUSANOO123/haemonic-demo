@@ -59,8 +59,8 @@ window.HM_DEMO_CFG = {
     notesDefault: ['특이사항 없음', '정상 완료', '확인 완료 · 이상 없음', '사진 찍어 단톡방 공유', '부족분 바로 채움', '평소보다 오래 걸림 — 손님 몰림', '같이 한 사람과 나눠서 끝냄', '처음 해 봐서 매니저에게 물어보고 함'],
   },
   tanks: {   // [수조번호-칸]: [품종, 라벨, 마리, kg, n일 전 입고]
-    ansan: { '1-top': [['대게', '러시아', 14, 18.2, 2], ['대게', '국내산', 6, 7.1, 1]], '1-bottom': [['대게', '러시아', 9, 11.6, 3]], '2-top': [['킹크랩', '레드', 5, 12.4, 2], ['킹크랩', '브라운', 4, 8.9, 1]], '2-bottom': [['랍스터', '', 12, 7.2, 4]], '3-top': [['대게', '러시아', 11, 14.3, 1]], '4-top': [['킹크랩', '레드', 3, 7.8, 5]] },
-    anyang: { '1-top': [['대게', '러시아', 10, 12.8, 1]], '1-bottom': [['대게', '러시아', 7, 8.9, 3]], '2-top': [['킹크랩', '레드', 3, 7.4, 2], ['킹크랩', '브라운', 2, 4.6, 2]], '3-bottom': [['랍스터', '', 8, 4.9, 5]] },
+    ansan: { '1-top': [['대게', '러시아', 14, 18.2, 2], ['대게', '국내산', 6, 7.1, 1]], '1-bottom': [['대게', '러시아', 9, 11.6, 3]], '2-top': [['킹크랩', '레드', 5, 12.4, 2], ['킹크랩', '브라운', 4, 8.9, 1]], '2-bottom': [['랍스터', '', 12, 7.2, 4]], '3-top': [['대게', '러시아', 11, 14.3, 1]], '3-bottom': [['대게', '국내산', 5, 5.8, 2]], '4-top': [['킹크랩', '레드', 3, 7.8, 5]], '4-bottom': [['랍스터', '', 6, 3.6, 1]] },
+    anyang: { '1-top': [['대게', '러시아', 10, 12.8, 1]], '1-bottom': [['대게', '러시아', 7, 8.9, 3]], '2-top': [['킹크랩', '레드', 3, 7.4, 2], ['킹크랩', '브라운', 2, 4.6, 2]], '2-bottom': [['대게', '국내산', 4, 4.7, 1]], '3-top': [['킹크랩', '레드', 2, 5.1, 4]], '3-bottom': [['랍스터', '', 8, 4.9, 5]] },
     count: { ansan: 4, anyang: 3 },
   },
   health: { issuedAgo: [320, 40, 350, null, 200], memo: { 0: { ansan: '상록수보건소', anyang: '동안구보건소' }, 2: '만료 전 재발급 예약함' } },   // null = 미등록
@@ -110,8 +110,10 @@ window.HM_DEMO_SEED = async function (api) {
         am = [mgr, kit]; pm = [mgr, hallKit].concat(busy ? [kit] : []);
         if (wd === 1) { am = [kit, hallKit]; pm = [hallKit, kit]; }   // 월요일은 매니저 휴무
       }
-      if (i === -C.tasks.subAgo && st === 'ansan') pm = pm.map((x) => (x === rest[0] ? rest[2] : x));   // 대타: 박서준 → 최유나
+      const sub = i === -C.tasks.subAgo && st === 'ansan';
+      if (sub) pm = pm.concat([rest[2]]);   // 대타: 박서준 휴가 → 최유나가 대신 (박서준은 휴가·부재로 표시)
       api.applyShiftDay(k, [...new Set(am.map((x) => x.name))], [...new Set(pm.map((x) => x.name))]);
+      if (sub) { const dd = (api.schedOf().days || {})[k]; if (dd) Object.values(dd.segs).forEach((seg) => { if (seg.workers.some((w) => w.name === rest[0].name)) seg.leave = [rest[0].name]; }); }
     }
 
     /* 할 일 기록 — 지난 6주 + 오늘(지금 시각 이전 것만). 메모는 업무 종류에 맞게 */
@@ -216,6 +218,8 @@ window.HM_DEMO_SEED = async function (api) {
     const urls = (S.training || []).map((x) => x.url).filter(Boolean);
     S.trainDone = {}; S.trainQuiz = {};
     S.staff.forEach((x, idx) => { S.trainDone[x.name] = {}; S.trainQuiz[x.name] = {}; urls.slice(0, Math.max(idx === S.staff.length - 1 ? 0 : 2, 9 - idx * 2)).forEach((u, j) => { S.trainDone[x.name][u] = shift(today, -(j + 1)); if (api.quizOf(u)) S.trainQuiz[x.name][u] = { tries: j % 3 === 0 ? 2 : 1, at: shift(today, -(j + 1)) }; }); });   // 마지막 직원은 아직 한 편도 안 봄
+    // 첫 코스는 관리자가 완주(배지 1) — 대시보드·랭킹에 배지가 보이게
+    (api.trackSteps(api.TRAIN_TRACKS[0]) || []).forEach((u, j) => { S.trainDone[mgr.name][u] = shift(today, -(20 - j)); if (api.quizOf(u)) S.trainQuiz[mgr.name][u] = { tries: 1, at: shift(today, -(20 - j)) }; });
     S.missions = S.staff.slice(1, 4).map((x, j) => ({ id: 'ms' + j, who: x.name, text: ['손님 오시면 3초 안에 인사하기', '퇴근 전 작업대 물기까지 닦기', '대게 손질 순서 외워서 혼자 해 보기'][j] || '오늘 배운 것 적용하기', cat: '서비스', month: mon, createdAt: Date.now() - 864e5 * (j + 1), status: ['done', 'claimed', 'open'][j] || 'open', doneAt: j === 0 ? Date.now() - 864e5 : undefined }));
     if (st === 'ansan') S.missions.push({ id: 'ms9', who: '박서준', text: '외국인 손님 알레르기 질문 — 영어 안내문 만들어 카운터에 두기', cat: '서비스', month: mon, createdAt: Date.now() - 3600e3 * 30, status: 'open' });
     docs[st] = S;
