@@ -170,6 +170,7 @@ window.HM_DEMO_SEED = async function (api) {
       const k = shift(today, -i);
       if (i > C.days.purchases) {   // 오래된 기간은 갑각류만, 명절 2주 전은 단가 10~15% 높게
         const nearEv0 = i % 4 === 0; if (nearEv0) { const nearEv = C.sales.holidays.some((hd) => { const ev = hd.length === 5 ? k.slice(0, 4) + '-' + hd : hd; const dd = (new Date(ev + 'T00:00:00') - new Date(k + 'T00:00:00')) / 864e5; return dd >= 0 && dd <= 14; }); const kg = Math.round(PC.crabKg[st] * (0.8 + R() * 0.4) * 10) / 10, unit = Math.round((PC.crabUnit[0] - 6000 + R() * 9000) * (nearEv ? 1.12 : 1) + (C.days.crabHistory - i) * 12); row({ date: k, cat: '대게', name: '대게(러시아)', qty: kg, unit: 'kg', amount: Math.round(kg * unit / 100) * 100, vendor: PC.vendors.crab, by: mgr.name }); }
+        if (i % 12 === 5) { const lk = Math.round((st === 'ansan' ? 4 : 2.5) * (0.8 + R() * 0.4) * 10) / 10; row({ date: k, cat: '랍스터', name: '랍스터(캐나다)', qty: lk, unit: 'kg', amount: Math.round(lk * (52000 + R() * 8000) / 100) * 100, vendor: PC.vendors.crab, by: mgr.name }); }
         if (i % 8 === 2) { const kk = Math.round(PC.kingKg[st] * (0.8 + R() * 0.4) * 10) / 10, ku = PC.kingUnit[0] - 8000 + Math.round(R() * 16000); row({ date: k, cat: '킹크랩', name: '킹크랩', qty: kk, unit: 'kg', amount: Math.round(kk * ku / 100) * 100, vendor: PC.vendors.crab, by: mgr.name }); }
         continue;
       }
@@ -179,6 +180,7 @@ window.HM_DEMO_SEED = async function (api) {
         row({ date: k, cat: '대게', name: '대게(러시아)', qty: kg, unit: 'kg', amount: Math.round(kg * unit / 100) * 100, vendor: PC.vendors.crab, by: mgr.name, memo: spike ? '주말 단체 예약 대비 — 시세 올라 단가 높음' : '' });
         if (R() < PC.kingProb) { const kk = Math.round(PC.kingKg[st] * (0.8 + R() * 0.4) * 10) / 10, ku = PC.kingUnit[0] + Math.round(R() * (PC.kingUnit[1] - PC.kingUnit[0])); row({ date: k, cat: '킹크랩', name: '킹크랩', qty: kk, unit: 'kg', amount: Math.round(kk * ku / 100) * 100, vendor: PC.vendors.crab, by: mgr.name }); }
       }
+      if (i % 12 === 5) { const lk = Math.round((st === 'ansan' ? 4 : 2.5) * (0.8 + R() * 0.4) * 10) / 10; row({ date: k, cat: '랍스터', name: '랍스터(캐나다)', qty: lk, unit: 'kg', amount: Math.round(lk * (52000 + R() * 8000) / 100) * 100, vendor: PC.vendors.crab, by: mgr.name }); }
       if (i % PC.vegEvery === 0) { const v = pick(PC.vegItems), q = 2 + Math.floor(R() * 3); row({ date: k, cat: '식자재', name: v[0], qty: q, unit: '단', amount: q * v[1], vendor: PC.vendors.veg }); }
       if (i % 2 === 1) { const f = pick(PC.food); row({ date: k, cat: f[0], name: f[1], qty: null, unit: 'kg', amount: Math.round(f[2] * 1.6 * (0.85 + R() * 0.3) / 100) * 100 }); }
     }
