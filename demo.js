@@ -8,7 +8,7 @@ window.HM_DEMO = true;
 
 window.HM_DEMO_CFG = {
   pw: '1234',
-  days: { tasks: 42, sales: 56, purchases: 56, rosterBack: 42, rosterAhead: 14 },   // 오늘 기준 지난 6주 + 앞으로 2주 근무표
+  days: { tasks: 42, sales: 56, purchases: 56, crabHistory: 420, rosterBack: 42, rosterAhead: 14 },   // 갑각류 매입만 14개월 — 명절 앞 단가 패턴(매입 인사이트)용   // 오늘 기준 지난 6주 + 앞으로 2주 근무표
   staff: {   // 가상 이름 — 실제 직원 이름과 겹치지 않게 확인함(10/11)
     ansan: [
       { id: 'd1', name: '김하늘', roles: ['갑각류 관리자'], pay: { type: 'month', amount: 3200000 }, pattern: '오전·마감 (주 6일)' },
@@ -166,8 +166,12 @@ window.HM_DEMO_SEED = async function (api) {
     S.purchases = [];
     const PC = C.purchases;
     const row = (o) => S.purchases.push({ id: newId('p'), vendor: PC.vendors.food, memo: '', by: pick(S.staff).name, createdAt: Date.now(), src: 'demo', ...o });
-    for (let i = C.days.purchases; i >= 0; i--) {
+    for (let i = C.days.crabHistory; i >= 0; i--) {
       const k = shift(today, -i);
+      if (i > C.days.purchases) {   // 오래된 기간은 갑각류만, 명절 2주 전은 단가 10~15% 높게
+        if (i % 4 === 0) { const nearEv = C.sales.holidays.some((hd) => { const ev = hd.length === 5 ? k.slice(0, 4) + '-' + hd : hd; const dd = (new Date(ev + 'T00:00:00') - new Date(k + 'T00:00:00')) / 864e5; return dd >= 0 && dd <= 14; }); const kg = Math.round(PC.crabKg[st] * (0.8 + R() * 0.4) * 10) / 10, unit = Math.round((PC.crabUnit[0] - 6000 + R() * 9000) * (nearEv ? 1.12 : 1) + (C.days.crabHistory - i) * 12); row({ date: k, cat: '대게', name: '대게(러시아)', qty: kg, unit: 'kg', amount: Math.round(kg * unit / 100) * 100, vendor: PC.vendors.crab, by: mgr.name }); }
+        continue;
+      }
       if (i % PC.crabEvery[st] === 0) {
         const spike = i === PC.spikeAgo;
         const kg = Math.round(PC.crabKg[st] * (spike ? PC.spikeKg : 0.8 + R() * 0.4) * 10) / 10, unit = spike ? PC.spikeUnit : PC.crabUnit[0] + Math.round(R() * (PC.crabUnit[1] - PC.crabUnit[0]) + (C.days.purchases - i) * 60);
@@ -222,6 +226,22 @@ window.HM_DEMO_SEED = async function (api) {
     (api.trackSteps(api.TRAIN_TRACKS[0]) || []).forEach((u, j) => { S.trainDone[mgr.name][u] = shift(today, -(20 - j)); if (api.quizOf(u)) S.trainQuiz[mgr.name][u] = { tries: 1, at: shift(today, -(20 - j)) }; });
     S.missions = S.staff.slice(1, 4).map((x, j) => ({ id: 'ms' + j, who: x.name, text: ['손님 오시면 3초 안에 인사하기', '퇴근 전 작업대 물기까지 닦기', '대게 손질 순서 외워서 혼자 해 보기'][j] || '오늘 배운 것 적용하기', cat: '서비스', month: mon, createdAt: Date.now() - 864e5 * (j + 1), status: ['done', 'claimed', 'open'][j] || 'open', doneAt: j === 0 ? Date.now() - 864e5 : undefined }));
     if (st === 'ansan') S.missions.push({ id: 'ms9', who: '박서준', text: '외국인 손님 알레르기 질문 — 영어 안내문 만들어 카운터에 두기', cat: '서비스', month: mon, createdAt: Date.now() - 3600e3 * 30, status: 'open' });
+    /* 레시피 4개 */
+    S.recipes = [
+      { id: 'r1', name: '대게찜 (2인)', cat: '대게', ingredients: '대게 1.2kg\n청주 50ml\n물 1L', steps: '1. 수조에서 꺼내 찬물에 10분 기절\n2. 배가 위로 가게 찜기에 올림\n3. 센 불 15분 → 불 끄고 3분 뜸\n4. 다리 가위로 손질해 접시에 부채꼴로', tip: '배를 위로 해야 게장이 안 흐른다. 찌는 중에 뚜껑 열지 않기', updatedAt: Date.now() - 864e5 * 12, by: mgr.name },
+      { id: 'r2', name: '킹크랩찜 (3~4인)', cat: '킹크랩', ingredients: '킹크랩 2.5kg\n청주 80ml', steps: '1. 기절 10분\n2. 찜기 배 위로, 센 불 22분\n3. 뜸 5분 후 몸통·다리 분리', tip: '레드와 브라운은 같은 시간. 2.5kg 넘으면 3분 추가', updatedAt: Date.now() - 864e5 * 9, by: mgr.name },
+      { id: 'r3', name: '게딱지 볶음밥', cat: '사이드', ingredients: '밥 1공기\n게 내장·살 2큰술\n김가루·참기름·날치알', steps: '1. 게딱지에 밥 넣고 내장과 비빔\n2. 버터 두른 팬에 2분 볶음\n3. 김가루·날치알 올려 딱지째 서빙', tip: '내장 양이 적으면 참기름 반 큰술 더', updatedAt: Date.now() - 864e5 * 6, by: S.staff[S.staff.length - 1].name },
+      { id: 'r4', name: '초간장 (게 찍는 장)', cat: '소스·장', ingredients: '간장 100ml\n식초 40ml\n설탕 1큰술\n레몬즙 약간', steps: '1. 재료 섞어 설탕 녹임\n2. 냉장 보관 3일', tip: '랍스터는 버터소스 따로', updatedAt: Date.now() - 864e5 * 20, by: mgr.name },
+    ];
+    /* 지난달 급여 확정 — 근무표 합계 그대로 (근무 기록 합계 = 급여) */
+    const prevM = (() => { const d = new Date(today.slice(0, 4), Number(today.slice(5, 7)) - 2, 1); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; })();
+    try { const L = api.laborCalc(prevM); if (L && L.rows.length) { S.payroll = { [prevM]: { at: shift(today, -Number(today.slice(8)) + 3) + ' 10:30', by: '사장님', sig: L.sig, rows: L.rows, total: L.total } }; } } catch (e) { console.warn('데모 급여 확정 실패', e); }
+    /* 대표자 도장 — 예시 이미지(그림으로 그린 것) */
+    const seal = `<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><circle cx='80' cy='80' r='70' fill='none' stroke='#c8372d' stroke-width='6'/><text x='80' y='72' text-anchor='middle' font-family='serif' font-size='40' font-weight='700' fill='#c8372d'>해모닉</text><text x='80' y='112' text-anchor='middle' font-family='serif' font-size='28' fill='#c8372d'>김데모</text><text x='80' y='150' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#999'>예시 이미지</text></svg>`;
+    S.settings.seal = api.putBlob('seal', 'data:image/svg+xml;utf8,' + encodeURIComponent(seal));
+    /* 근로계약서 — 한 명은 초안(진행 중) */
+    S.contracts = [];
+    try { const c = api.newContract(S.staff[1]); c.f.start = shift(today, -40); c.f.pay = S.staff[1].pay.amount; c.by = mgr.name; } catch (e) { console.warn('데모 계약서 실패', e); }
     docs[st] = S;
   }
 
